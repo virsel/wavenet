@@ -3,7 +3,7 @@ import lightning as L
 import torch.nn as nn
 import torch
 
-from src.script.config import Config
+from config import Config
 
 
 def get_model(cfg):
@@ -11,7 +11,7 @@ def get_model(cfg):
     layers = list(model.modules())[1:]
     for layer in layers[:-1]:
         layer.register_forward_hook(forward_hook)
-        print(layer)
+        # print(layer)
     return  model
     
 # Define the forward hook function
@@ -154,11 +154,11 @@ class WaveModel(L.LightningModule):
         # lossi.append(loss.log10().item())
         # with torch.no_grad():
         # lr = optimizer.param_groups[0]['lr']
-        # ud.append([((lr*p.grad).std() / p.data.std()).log10().item() for p in model.parameters()])
+        # ud.append([((lr*p.grad).std() / p.output.std()).log10().item() for p in model.parameters()])
         # logs metrics for each training_step,
         # and the average across the epoch, to the progress bar and logger
         self.log(
-            "train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True
+            "train_loss", loss, on_epoch=True, prog_bar=True, logger=True, sync_dist=True
         )
         return loss
 
@@ -169,4 +169,5 @@ class WaveModel(L.LightningModule):
         inputs, target = batch
         output = self(inputs)
         loss = torch.nn.functional.cross_entropy(output, target.view(-1))
-        self.log("val_loss", loss)
+        self.log("val_loss", loss, on_step=True, on_epoch=True,prog_bar=True, sync_dist=True)
+        return loss
